@@ -20,14 +20,13 @@ package org.springframework.cloud.bus;
 import javax.annotation.PostConstruct;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.actuate.endpoint.Endpoint;
+import org.springframework.boot.actuate.endpoint.annotation.Endpoint;
 import org.springframework.boot.actuate.trace.TraceRepository;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.cloud.bus.endpoint.BusEndpoint;
 import org.springframework.cloud.bus.endpoint.EnvironmentBusEndpoint;
 import org.springframework.cloud.bus.endpoint.RefreshBusEndpoint;
 import org.springframework.cloud.bus.event.AckRemoteApplicationEvent;
@@ -43,7 +42,7 @@ import org.springframework.cloud.stream.annotation.EnableBinding;
 import org.springframework.cloud.stream.annotation.Output;
 import org.springframework.cloud.stream.annotation.StreamListener;
 import org.springframework.cloud.stream.config.BindingProperties;
-import org.springframework.cloud.stream.config.ChannelBindingServiceProperties;
+import org.springframework.cloud.stream.config.BindingServiceProperties;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.ApplicationEventPublisherAware;
@@ -75,7 +74,7 @@ public class BusAutoConfiguration implements ApplicationEventPublisherAware {
 	private ServiceMatcher serviceMatcher;
 
 	@Autowired
-	private ChannelBindingServiceProperties bindings;
+	private BindingServiceProperties bindings;
 
 	@Autowired
 	private BusProperties bus;
@@ -168,21 +167,14 @@ public class BusAutoConfiguration implements ApplicationEventPublisherAware {
 		}
 
 		@Bean
-		public ServiceMatcher serviceMatcher(@BusPathMatcher PathMatcher pathMatcher) {
+		public ServiceMatcher serviceMatcher(@BusPathMatcher PathMatcher pathMatcher,
+				BusProperties bus) {
 			ServiceMatcher serviceMatcher = new ServiceMatcher();
 			serviceMatcher.setMatcher(pathMatcher);
+			serviceMatcher.setBusProperties(bus);
 			return serviceMatcher;
 		}
 
-	}
-
-	@Configuration
-	@ConditionalOnClass(Endpoint.class)
-	protected static class BusEndpointConfiguration {
-		@Bean
-		public BusEndpoint busEndpoint() {
-			return new BusEndpoint();
-		}
 	}
 
 	@Configuration
@@ -201,8 +193,8 @@ public class BusAutoConfiguration implements ApplicationEventPublisherAware {
 		protected static class BusRefreshEndpointConfiguration {
 			@Bean
 			public RefreshBusEndpoint refreshBusEndpoint(ApplicationContext context,
-					BusEndpoint busEndpoint) {
-				return new RefreshBusEndpoint(context, context.getId(), busEndpoint);
+					BusProperties bus) {
+				return new RefreshBusEndpoint(context, bus.getId());
 			}
 		}
 
@@ -238,8 +230,8 @@ public class BusAutoConfiguration implements ApplicationEventPublisherAware {
 		protected static class EnvironmentBusEndpointConfiguration {
 			@Bean
 			public EnvironmentBusEndpoint environmentBusEndpoint(
-					ApplicationContext context, BusEndpoint busEndpoint) {
-				return new EnvironmentBusEndpoint(context, context.getId(), busEndpoint);
+					ApplicationContext context, BusProperties bus) {
+				return new EnvironmentBusEndpoint(context, bus.getId());
 			}
 		}
 	}
